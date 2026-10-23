@@ -1,1 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>樂透彩券號碼自動產生器 | Mark Six Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 3D Glass & Sphere Effects for Lottery Balls */
+        .lottery-ball {
+            position: relative;
+            background: radial-gradient(circle at 35% 35%, var(--ball-light), var(--ball-main), var(--ball-dark));
+            box-shadow: inset -5px -5px 12px rgba(0, 0, 0, 0.4),
+                        inset 4px 4px 8px rgba(255, 255, 255, 0.6),
+                        0 10px 15px -3px rgba(0, 0, 0, 0.3),
+                        0 4px 6px -2px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        /* Ball color ranges (Mark Six standard palette / Custom ranges) */
+        .ball-range-1 { /* 1-10: Red */
+            --ball-light: #fca5a5;
+            --ball-main: #ef4444;
+            --ball-dark: #991b1b;
+            color: white;
+        }
+        .ball-range-2 { /* 11-20: Blue */
+            --ball-light: #93c5fd;
+            --ball-main: #3b82f6;
+            --ball-dark: #1e3a8a;
+            color: white;
+        }
+        .ball-range-3 { /* 21-30: Green */
+            --ball-light: #86efac;
+            --ball-main: #22c55e;
+            --ball-dark: #14532d;
+            color: white;
+        }
+        .ball-range-4 { /* 31-40: Purple */
+            --ball-light: #d8b4fe;
+            --ball-main: #a855f7;
+            --ball-dark: #581c87;
+            color: white;
+        }
+        .ball-range-5 { /* 41-49: Amber/Gold */
+            --ball-light: #fde047;
+            --ball-main: #eab308;
+            --ball-dark: #713f12;
+            color: #1e293b;
+        }
 
+        /* Rolling Animation State */
+        .is-rolling {
+            animation: roll-bounce 0.12s infinite alternate linear;
+        }
+
+        @keyframes roll-bounce {
+            0% { transform: translateY(-4px) rotate(-8deg) scale(0.98); }
+            100% { transform: translateY(4px) rotate(8deg) scale(1.02); }
+        }
+
+        /* Pop in animation when revealed */
+        .pop-in {
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.3) rotate(-180deg); }
+            100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(241, 245, 249, 0.8);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-full font-sans antialiased flex flex-col justify-between">
+
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-rose-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i class="fa-solid font-bold text-lg text-white">49</i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent leading-tight">自動號碼生成器</h1>
+                    <p class="text-xs text-slate-400">1 - 49 隨機幸運號碼搖號</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btnOpenRules" class="px-3 py-1.5 text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition border border-slate-700/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders">
+</i>
+                    <span>進階設定</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left / Main Draw Area (8 cols) -->
+        <section class="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+            
+            <!-- Lottery Display Card -->
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-6 sm:p-8 backdrop-blur shadow-2xl relative overflow-hidden">
+                <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                            標準六碼 (1 - 49)
+                        </span>
+                    </div>
+                    <div id="drawStatusText" class="text-xs text-slate-400 font-mono">準備開獎</div>
+                </div>
+
+                <!-- Ball Containers -->
+                <div class="py-6 sm:py-10 px-2 flex flex-wrap items-center justify-center gap-3 sm:gap-5 min-h-[160px]" id="ballContainer">
+                    <!-- Placeholder initial balls -->
+                    <div class="lottery-ball ball-range-1 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-bold text-xl sm:text-2xl shadow-lg opacity-40">?</div>
+                    <div class="lottery-ball ball-range-2 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-bold text-xl sm:text-2xl shadow-lg opacity-40">?</div>
+                    <div class="lottery-ball ball-range-3 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-bold text-xl sm:text-2xl shadow-lg opacity-40">?</div>
+                    <div class="lottery-ball ball-range-4 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-bold text-xl sm:text-2xl shadow-lg opacity-40">?</div>
+                    <div class="lottery-ball ball-range-5 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-bold text-xl sm:text-2xl shadow-lg opacity-40">?</div>
+                    <div class="lottery-ball ball-range-1 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-bold text-xl sm:text-2xl shadow-lg opacity-40">?</div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="mt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <button id="btnGenerate" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 hover:from-indigo-600 hover:via-purple-600 hover:to-rose-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-95 transition-all duration-200 flex items-center justify-center gap-3 text-lg">
+                        <i class="fa-solid fa-dice text-xl animate-spin-slow"></i>
+                        <span>自動生成號碼</span>
+                    </button>
+                    
+                    <button id="btnCopy" disabled class="w-full sm:w-auto px-5 py-4 bg-slate-700/80 hover:bg-slate-700 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition border border-slate-600/50 flex items-center justify-center gap-2">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>複製號碼</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Color Palette & Range Info -->
+            <div class="bg-slate-800/40 border border-slate-700/40 rounded-xl p-4">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">號碼區間色彩說明</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                    <div class="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-800">
+                        <span class="w-3.5 h-3.5 rounded-full bg-red-500 inline-block shadow"></span>
+                        <span class="text-slate-300 font-mono">01 - 10</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-800">
+                        <span class="w-3.5 h-3.5 rounded-full bg-blue-500 inline-block shadow"></span>
+                        <span class="text-slate-300 font-mono">11 - 20</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-800">
+                        <span class="w-3.5 h-3.5 rounded-full bg-green-500 inline-block shadow"></span>
+                        <span class="text-slate-300 font-mono">21 - 30</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-800">
+                        <span class="w-3.5 h-3.5 rounded-full bg-purple-500 inline-block shadow"></span>
+                        <span class="text-slate-300 font-mono">31 - 40</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-800 col-span-2 sm:col-span-1">
+                        <span class="w-3.5 h-3.5 rounded-full bg-amber-400 inline-block shadow"></span>
+                        <span class="text-slate-300 font-mono">41 - 49</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right / History & Stats Area (4 cols) -->
+        <section class="lg:col-span-5 xl:col-span-4 flex flex-col gap-6">
+            
+            <!-- History Card -->
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 backdrop-blur flex flex-col h-[460px]">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-700/60">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i>
+                        <h2 class="font-bold text-slate-200">開獎紀錄</h2>
+                        <span id="historyCount" class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">0</span>
+                    </div>
+                    <button id="btnClearHistory" class="text-xs text-slate-400 hover:text-rose-400 transition flex items-center gap-1">
+                        <i class="fa-regular fa-trash-can"></i>
+                        <span>清空</span>
+                    </button>
+                </div>
+
+                <!-- History List -->
+                <div id="historyList" class="flex-1 overflow-y-auto my-3 pr-1 space-y-2.5">
+                    <!-- Empty State -->
+                    <div id="emptyHistory" class="h-full flex flex-col items-center justify-center text-slate-500 py-10">
+                        <i class="fa-solid fa-receipt text-3xl mb-2 opacity-40"></i>
+                        <p class="text-sm">尚無生成紀錄</p>
+                        <p class="text-xs text-slate-600">點擊「自動生成號碼」開始</p>
+                    </div>
+                </div>
+
+                <!-- Footer Quick Batch Export -->
+                <div class="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
+                    <span>提示: 紀錄儲存於本地瀏覽器</span>
+                    <button id="btnCopyAllHistory" class="text-indigo-400 hover:text-indigo-300 transition">複製全部歷史</button>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Modal: Settings & Rules -->
+    <div id="rulesModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-200 p-4">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl transform scale-95 transition-transform duration-200">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-700">
+                <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-indigo-400"></i>
+                    生成規則與排除設定
+                </h3>
+                <button id="btnCloseRules" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="py-4 space-y-5 text-sm">
+                <!-- Sorting Preference -->
+                <div>
+                    <label class="block font-medium text-slate-300 mb-2">開獎號碼排序方式</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-700 bg-slate-900/50 cursor-pointer hover:border-slate-600">
+                            <input type="radio" name="sortRule" value="asc" checked class="text-indigo-500 focus:ring-0 bg-slate-800 border-slate-600">
+                            <span class="text-slate-200">由小到大 (升序)</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-700 bg-slate-900/50 cursor-pointer hover:border-slate-600">
+                            <input type="radio" name="sortRule" value="random" class="text-indigo-500 focus:ring-0 bg-slate-800 border-slate-600">
+                            <span class="text-slate-200">完全隨機 (搖出順序)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Exclude Numbers -->
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">排除號碼 (以逗號或空格分隔)</label>
+                    <p class="text-xs text-slate-400 mb-2">設定不想出現的號碼 (例如: 4, 13, 44)</p>
+                    <input type="text" id="excludeInput" placeholder="例: 4, 13, 14" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm">
+                </div>
+
+                <!-- Odd/Even Balance Rule -->
+                <div>
+                    <label class="block font-medium text-slate-300 mb-2">奇偶數偏好限制</label>
+                    <select id="oddEvenRule" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm">
+                        <option value="any">不限 (完全隨機)</option>
+                        <option value="balanced">相對平衡 (奇數與偶數各 2-4 個)</option>
+                        <option value="moreOdd">奇數較多 (至少 4 個奇數)</option>
+                        <option value="moreEven">偶數較多 (至少 4 個偶數)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-700 flex justify-end gap-3">
+                <button id="btnSaveRules" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition">
+                    儲存變更
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg" class="text-sm font-medium">提示訊息</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 py-4 bg-slate-950/40">
+        <div class="max-w-6xl mx-auto px-4 text-center text-xs text-slate-500">
+            本工具僅供娛樂與號碼參考，不保證中獎。請理性投注。
+        </div>
+    </footer>
+
+    <!-- JavaScript App Logic -->
+    <script>
+        // DOM Elements
+        const ballContainer = document.getElementById('ballContainer');
+        const btnGenerate = document.getElementById('btnGenerate');
+        const btnCopy = document.getElementById('btnCopy');
+        const historyList = document.getElementById('historyList');
+        const emptyHistory = document.getElementById('emptyHistory');
+        const historyCount = document.getElementById('historyCount');
+        const btnClearHistory = document.getElementById('btnClearHistory');
+        const btnCopyAllHistory = document.getElementById('btnCopyAllHistory');
+        const drawStatusText = document.getElementById('drawStatusText');
+
+        // Modal Elements
+        const btnOpenRules = document.getElementById('btnOpenRules');
+        const btnCloseRules = document.getElementById('btnCloseRules');
+        const rulesModal = document.getElementById('rulesModal');
+        const btnSaveRules = document.getElementById('btnSaveRules');
+        const excludeInput = document.getElementById('excludeInput');
+        const oddEvenRule = document.getElementById('oddEvenRule');
+
+        // App State
+        let currentNumbers = [];
+        let history = [];
+        let isGenerating = false;
+        let config = {
+            sort: 'asc', // 'asc' or 'random'
+            exclude: [],
+            oddEven: 'any' // 'any', 'balanced', 'moreOdd', 'moreEven'
+        };
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            loadHistoryFromStorage();
+        });
+
+        // Helper: Get Color Class by Number Range
+        function getBallRangeClass(num) {
+            if (num <= 10) return 'ball-range-1'; // 1-10 Red
+            if (num <= 20) return 'ball-range-2'; // 11-20 Blue
+            if (num <= 30) return 'ball-range-3'; // 21-30 Green
+            if (num <= 40) return 'ball-range-4'; // 31-40 Purple
+            return 'ball-range-5';               // 41-49 Amber
+        }
+
+        // Helper: Format number with leading zero
+        function padZero(num) {
+            return num < 10 ? `0${num}` : `${num}`;
+        }
+
+        // Generate 6 Unique Random Numbers based on Rules
+        function generateNumbers() {
+            const pool = [];
+            for (let i = 1; i <= 49; i++) {
+                if (!config.exclude.includes(i)) {
+                    pool.push(i);
+                }
+            }
+
+            if (pool.length < 6) {
+                showToast('排除號碼過多，剩餘可選號碼不足 6 個！', 'error');
+                return null;
+            }
+
+            let result = [];
+            let isValid = false;
+            let attempts = 0;
+
+            while (!isValid && attempts < 500) {
+                attempts++;
+                result = [];
+                const tempPool = [...pool];
+
+                // Pick 6 random unique
+                for (let i = 0; i < 6; i++) {
+                    const idx = Math.floor(Math.random() * tempPool.length);
+                    result.push(tempPool[idx]);
+                    tempPool.splice(idx, 1);
+                }
+
+                // Check Odd/Even Rules
+                const odds = result.filter(n => n % 2 !== 0).length;
+                const evens = 6 - odds;
+
+                if (config.oddEven === 'balanced') {
+                    if (odds >= 2 && odds <= 4) isValid = true;
+                } else if (config.oddEven === 'moreOdd') {
+                    if (odds >= 4) isValid = true;
+                } else if (config.oddEven === 'moreEven') {
+                    if (evens >= 4) isValid = true;
+                } else {
+                    isValid = true;
+                }
+            }
+
+            if (!isValid) {
+                showToast('無法在限制條件下生成合適組合，請調整設定', 'error');
+                return null;
+            }
+
+            // Sort numbers if required
+            if (config.sort === 'asc') {
+                result.sort((a, b) => a - b);
+            }
+
+            return result;
+        }
+
+        // Animated Rolling & Drawing Process
+        async function startDraw() {
+            if (isGenerating) return;
+
+            const finalNumbers = generateNumbers();
+            if (!finalNumbers) return;
+
+            isGenerating = true;
+            btnGenerate.disabled = true;
+            btnCopy.disabled = true;
+            btnGenerate.classList.add('opacity-75', 'cursor-not-allowed');
+            drawStatusText.textContent = '搖號中...';
+
+            // Reset container with rolling placeholder balls
+            ballContainer.innerHTML = '';
+            const tempBalls = [];
+
+            for (let i = 0; i < 6; i++) {
+                const ball = document.createElement('div');
+                ball.className = `lottery-ball ball-range-1 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-bold text-xl sm:text-2xl shadow-lg is-rolling`;
+                ball.textContent = '?';
+                ballContainer.appendChild(ball);
+                tempBalls.push(ball);
+            }
+
+            // Reveal balls one by one
+            currentNumbers = finalNumbers;
+
+            for (let i = 0; i < 6; i++) {
+                await new Promise(res => setTimeout(res, 350)); // Delay between each ball reveal
+
+                const targetVal = currentNumbers[i];
+                const rangeClass = getBallRangeClass(targetVal);
+                
+                const revealedBall = tempBalls[i];
+                revealedBall.classList.remove('is-rolling', 'ball-range-1');
+                revealedBall.classList.add(rangeClass, 'pop-in');
+                revealedBall.textContent = padZero(targetVal);
+            }
+
+            drawStatusText.textContent = '開獎完成';
+            isGenerating = false;
+            btnGenerate.disabled = false;
+            btnCopy.disabled = false;
+            btnGenerate.classList.remove('opacity-75', 'cursor-not-allowed');
+
+            // Add to history
+            saveToHistory(currentNumbers);
+        }
+
+        // History Management
+        function saveToHistory(numbers) {
+            const record = {
+                id: Date.now(),
+                time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                numbers: [...numbers]
+            };
+
+            history.unshift(record);
+            if (history.length > 30) history.pop(); // Keep last 30 records
+
+            updateHistoryUI();
+            localStorage.setItem('markSixHistory', JSON.stringify(history));
+        }
+
+        function loadHistoryFromStorage() {
+            const saved = localStorage.getItem('markSixHistory');
+            if (saved) {
+                try {
+                    history = JSON.parse(saved);
+                    updateHistoryUI();
+                } catch (e) {
+                    history = [];
+                }
+            }
+        }
+
+        function updateHistoryUI() {
+            historyCount.textContent = history.length;
+
+            if (history.length === 0) {
+                emptyHistory.style.display = 'flex';
+                historyList.querySelectorAll('.history-item').forEach(el => el.remove());
+                return;
+            }
+
+            emptyHistory.style.display = 'none';
+            
+            // Re-render list
+            historyList.innerHTML = '';
+            history.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'history-item bg-slate-900/60 hover:bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between transition gap-2';
+                
+                const numSpanHTML = item.numbers.map(n => {
+                    const bgClass = getBallRangeClass(n);
+                    return `<span class="w-7 h-7 rounded-full ${bgClass} inline-flex items-center justify-center text-xs font-bold shadow-sm">${padZero(n)}</span>`;
+                }).join(' ');
+
+                row.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div class="flex items-center gap-1.5">${numSpanHTML}</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-slate-500 font-mono">${item.time}</span>
+                        <button onclick="copySingleHistory('${item.numbers.map(padZero).join(', ')}')" class="text-slate-500 hover:text-indigo-400 p-1 transition" title="複製此組">
+                            <i class="fa-regular fa-copy text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                historyList.appendChild(row);
+            });
+        }
+
+        // Copy Functions using execCommand for web environment safety
+        function copyTextToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            let success = false;
+            try {
+                success = document.execCommand('copy');
+            } catch (err) {
+                success = false;
+            }
+            document.body.removeChild(textarea);
+            return success;
+        }
+
+        btnCopy.addEventListener('click', () => {
+            if (currentNumbers.length === 0) return;
+            const str = currentNumbers.map(padZero).join(', ');
+            if (copyTextToClipboard(str)) {
+                showToast(`已複製號碼: ${str}`);
+            } else {
+                showToast('複製失敗，請手動複製', 'error');
+            }
+        });
+
+        window.copySingleHistory = function(numStr) {
+            if (copyTextToClipboard(numStr)) {
+                showToast(`已複製號碼: ${numStr}`);
+            }
+        };
+
+        btnCopyAllHistory.addEventListener('click', () => {
+            if (history.length === 0) {
+                showToast('目前沒有歷史紀錄', 'error');
+                return;
+            }
+            const allStr = history.map((h, idx) => `第 ${history.length - idx} 組: ${h.numbers.map(padZero).join(', ')}`).join('\n');
+            if (copyTextToClipboard(allStr)) {
+                showToast('已複製全部歷史號碼！');
+            }
+        });
+
+        btnClearHistory.addEventListener('click', () => {
+            if (history.length === 0) return;
+            history = [];
+            localStorage.removeItem('markSixHistory');
+            updateHistoryUI();
+            showToast('已清空歷史紀錄');
+        });
+
+        // Rules & Modal Operations
+        btnOpenRules.addEventListener('click', () => {
+            rulesModal.classList.remove('opacity-0', 'pointer-events-none');
+            rulesModal.firstElementChild.classList.remove('scale-95');
+            rulesModal.firstElementChild.classList.add('scale-100');
+        });
+
+        function closeModal() {
+            rulesModal.firstElementChild.classList.remove('scale-100');
+            rulesModal.firstElementChild.classList.add('scale-95');
+            rulesModal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        btnCloseRules.addEventListener('click', closeModal);
+        rulesModal.addEventListener('click', (e) => {
+            if (e.target === rulesModal) closeModal();
+        });
+
+        btnSaveRules.addEventListener('click', () => {
+            // Save Sort
+            const sortVal = document.querySelector('input[name="sortRule"]:checked').value;
+            config.sort = sortVal;
+
+            // Save Exclude Numbers
+            const rawExclude = excludeInput.value;
+            const parsedExclude = rawExclude
+                .split(/[,，\s]+/)
+                .map(n => parseInt(n.trim(), 10))
+                .filter(n => !isNaN(n) && n >= 1 && n <= 49);
+
+            config.exclude = [...new Set(parsedExclude)]; // Unique
+            config.oddEven = oddEvenRule.value;
+
+            closeModal();
+            showToast('設定已更新');
+        });
+
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.textContent = message;
+
+            if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        // Event Listeners
+        btnGenerate.addEventListener('click', startDraw);
+    </script>
+</body>
+</html>
